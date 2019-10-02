@@ -3,6 +3,7 @@
 #include <unistd.h>
 
 
+
 // Helper Functions
 void mySleep(int secs){
 	usleep(1000000 * secs);
@@ -29,6 +30,9 @@ private:
 	const std::string FLAT = "=";
 
 	bool ERROR = false;
+	bool ENDGAME = false;
+	bool HELP = false;
+	bool USER_QUIT = false;
 
 	int DIR[8][2] = { {0,1}, {0,-1}, {1,0}, {-1,0}, {1,1}, {-1,1}, {-1,-1}, {1,-1} };
 
@@ -54,7 +58,11 @@ public:
 
 		initiate_board();
 		std::cin.ignore(1000, '\n');
-		new_play();
+
+		while (true){
+			new_play();
+			if (ENDGAME) {break;}
+		}
 	}
 
 
@@ -78,40 +86,58 @@ public:
 	void new_play(){
 		print_board();
 		
-		std::cout << nameArr[current_player] << ", make a move:" << std::endl;
+		std::cout << nameArr[current_player] << ", make a move:   (type 'help' for more information)" << std::endl;
 		std::string stringCoord;
 
-		
-		std::getline(std::cin, stringCoord);
-		
+		reset_bools();
+		getResponse(stringCoord);
+		if (HELP)
+			{return;
+		} else if (USER_QUIT){
+			ENDGAME = true;
+			return;
+		}
+
 		int x, y;
 		
 		x = stringCoord[0] - '0'; // converts char to int -___-
 		y = stringCoord[1] - '0'; // ^
 
 		errorCheckCoords(x, y);
+		if (ERROR) {return;}
 
-		if (!ERROR){
-			board[(x-1)][(y-1)] = current_player;
+		board[(x-1)][(y-1)] = current_player;
 
-			// Game has ENDED
-			if (game_over()){
-				print_board();
-				print_final_message();
-				return;
+		// Game has ENDED
+		if (game_over()){
+			print_board();
+			print_final_message();
+			ENDGAME = true;
+			return;
 
-			} else if (board_full()){
-				// DRAW
-				print_board();
-				print_draw_message();
-				return;
-			}
-
-			switch_player();
+		} else if (board_full()){
+			// DRAW
+			print_board();
+			print_draw_message();
+			ENDGAME = true;
+			return;
 		}
-		
-		ERROR = false;
-		new_play();
+
+		switch_player();
+	}
+
+
+	void getResponse(std::string& response){
+		std::getline(std::cin, response);
+
+		if (response == "help"){
+			displayHelp();
+			HELP = true;
+
+		} else if (response == "exit"){
+			USER_QUIT = true;
+			return;
+		}
 	}
 	
 
@@ -131,6 +157,11 @@ public:
 			mySleep(2);
 		}
 
+	}
+
+	void reset_bools(){
+		HELP = false;
+		ERROR = false;
 	}
 
 
@@ -242,6 +273,12 @@ public:
 		mySleep(2);
 	}
 
+	void displayHelp(){
+		std::cout << " - Move format: 'xy'\n";
+		std::cout << " - Type 'exit' to quit game\n";
+		mySleep(2);
+	}
+
 
 
 	bool game_over(){
@@ -305,6 +342,10 @@ public:
 		delete[] board;
 	}
 
+	bool didUserQuit(){
+		return USER_QUIT;
+	}
+
 
 	~Game(){
 		delete[] nameArr;
@@ -325,6 +366,9 @@ int main(){
 		game.start();
 
 		while (true){
+			if (game.didUserQuit()){
+				return 0;
+			}
 			std::string answer;
 			std::cout << "Would you like to play again? y/n: ";
 			std::cin >> answer;
